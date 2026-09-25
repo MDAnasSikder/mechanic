@@ -51,9 +51,7 @@
   .bottom-nav{position:sticky;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--border);display:flex;z-index:40;}
   .bottom-nav button{flex:1;background:none;border:none;padding:10px 4px;font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;}
   .bottom-nav button.active{color:var(--green);}
-
-  .fab{position:fixed;bottom:80px;right:calc(50% - 260px + 20px);width:58px;height:58px;border-radius:50%;background:var(--brand-gradient);color:#fff;border:none;font-size:26px;box-shadow:0 4px 14px rgba(0,145,234,.45);cursor:pointer;z-index:45;}
-  @media (max-width:560px){ .fab{ right:20px; } }
+.fab{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);width:58px;height:58px;border-radius:50%;background:var(--brand-gradient);color:#fff;border:none;font-size:26px;box-shadow:0 4px 14px rgba(0,145,234,.45);cursor:pointer;z-index:45;}
 
   .status-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:#fff;}
   .status-running{background:var(--green);}
