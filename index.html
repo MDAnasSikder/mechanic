@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Mechanic Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --accent:#0091EA; --accent2:#00B8D9; --accent-dark:#0069A8;
+    --brand-gradient:linear-gradient(135deg,var(--accent),var(--accent2));
+    --page-gradient:linear-gradient(180deg,#EAF6FF 0%,#F1F0FF 100%);
+    --green:#12B76A; --green-dark:#0B8A4E; --green-light:#E3FBEF;
+    --red:#E5342B; --red-light:#FDE8E7; --yellow:#FFB020; --yellow-light:#FFF4DF;
+    --bg:#EEF2F6; --text:#10151C; --muted:#5B6B7D; --border:#D7DEE6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--page-gradient);color:var(--text);min-height:100vh;-webkit-tap-highlight-color:transparent;}
+  .app{max-width:520px;margin:0 auto;min-height:100vh;background:var(--page-gradient);display:flex;flex-direction:column;position:relative;}
+  header{background:var(--brand-gradient);color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;border-bottom:3px solid var(--accent);}
+  header h1{font-family:'Barlow Condensed',sans-serif;font-size:21px;font-weight:800;letter-spacing:.3px;}
+  header .sub{font-size:11px;opacity:.85;margin-top:2px;}
+  .logout-btn{background:rgba(255,255,255,.15);color:#fff;border:none;padding:7px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;}
+  main{flex:1;padding:16px;padding-bottom:80px;}
+  .card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px;}
+  .field input,.field select,.field textarea{width:100%;padding:12px;border:1.5px solid var(--border);border-radius:9px;font-size:15px;background:#fafafa;}
+  .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent);background:#fff;}
+  .btn{width:100%;padding:14px;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;}
+  .btn-primary{background:var(--brand-gradient);color:#fff;}
+  .btn-danger{background:var(--red);color:#fff;}
+  .btn-outline{background:#fff;border:1.5px solid var(--green);color:var(--green);margin-top:8px;}
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
+  .hidden{display:none !important;}
+  .center-logo{text-align:center;padding:24px 0 6px;}
+  .center-logo .icon{width:60px;height:60px;background:var(--green-light);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:30px;}
+  .center-logo h2{font-size:19px;color:var(--green-dark);}
+  .center-logo p{font-size:12px;color:var(--muted);margin-top:4px;}
+  .tab-toggle{display:flex;border:1.5px solid var(--green);border-radius:10px;overflow:hidden;margin-bottom:16px;}
+  .tab-toggle button{flex:1;padding:11px;border:none;background:#fff;color:var(--green);font-weight:700;font-size:13px;cursor:pointer;}
+  .tab-toggle button.active{background:var(--green);color:#fff;}
+  .error-msg{background:var(--red-light);color:var(--red);padding:10px 12px;border-radius:9px;font-size:13px;margin-bottom:12px;font-weight:600;}
+  .info-msg{background:var(--blue-light);color:var(--blue);padding:10px 12px;border-radius:9px;font-size:13px;margin-bottom:12px;font-weight:600;}
+  .success-msg{background:var(--green-light);color:var(--green-dark);padding:10px 12px;border-radius:9px;font-size:13px;margin-bottom:12px;font-weight:600;}
+  .pw-toggle{font-size:11px;color:var(--muted);margin-top:6px;text-align:right;cursor:pointer;user-select:none;font-weight:600;}
+
+  .bottom-nav{position:sticky;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--border);display:flex;z-index:40;}
+  .bottom-nav button{flex:1;background:none;border:none;padding:10px 4px;font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;}
+  .bottom-nav button.active{color:var(--green);}
+
+  .fab{position:fixed;bottom:80px;right:calc(50% - 260px + 20px);width:58px;height:58px;border-radius:50%;background:var(--brand-gradient);color:#fff;border:none;font-size:26px;box-shadow:0 4px 14px rgba(0,145,234,.45);cursor:pointer;z-index:45;}
+  @media (max-width:560px){ .fab{ right:20px; } }
+
+  .status-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:#fff;}
+  .status-running{background:var(--green);}
+  .status-breakdown{background:var(--red);}
+  .status-wip{background:var(--yellow);color:#3A2600;}
+
+  .vehicle-item{border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;}
+  .vehicle-item .vname{font-weight:800;font-size:15px;}
+  .vehicle-item .vcode{color:var(--muted);font-size:12px;}
+  .vehicle-item .row{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:6px;}
+  .vehicle-item .mech-chip{display:inline-block;background:var(--green-light);color:var(--green-dark);font-size:11px;font-weight:700;padding:2px 8px;border-radius:12px;margin:4px 4px 0 0;}
+
+  .info-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(0,0,0,.06);gap:10px;}
+  .info-row:last-child{border-bottom:none;}
+  .info-row .label{font-size:12px;color:var(--muted);flex-shrink:0;}
+  .info-row .value{font-size:13px;font-weight:600;text-align:right;}
+  .section-title{font-size:13px;font-weight:800;color:var(--green-dark);margin:14px 0 8px;text-transform:uppercase;letter-spacing:.3px;}
+  .section-title:first-child{margin-top:0;}
+
+  #qr-reader{width:100%;border-radius:12px;overflow:hidden;border:2px solid var(--green);}
+  .scan-status{text-align:center;padding:10px;color:var(--muted);font-size:13px;}
+  .manual-toggle{text-align:center;font-size:12px;color:var(--green);font-weight:700;margin-top:10px;cursor:pointer;text-decoration:underline;}
+
+  .empty-state{text-align:center;color:var(--muted);font-size:13px;padding:24px 10px;}
+
+  .gantt-scroll{overflow-x:auto;border:1px solid var(--border);border-radius:10px;}
+  .gantt-row{display:flex;align-items:center;min-width:900px;border-bottom:1px solid #f0f0f0;padding:6px 0;}
+  .gantt-row:last-child{border-bottom:none;}
+  .gantt-label{width:140px;flex-shrink:0;padding:0 10px;font-size:12px;font-weight:700;}
+  .gantt-track{position:relative;flex:1;height:26px;background:#fafafa;border-radius:4px;}
+  .gantt-bar{position:absolute;top:2px;height:22px;border-radius:4px;background:var(--yellow);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;padding:0 6px;overflow:hidden;white-space:nowrap;cursor:pointer;}
+  .gantt-bar.completed{background:var(--green);}
+
+  .leave-item{border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;}
+  .leave-item .lname{font-weight:800;font-size:15px;}
+  .leave-item .ldate{color:var(--muted);font-size:12px;margin-top:2px;}
+  .leave-status-badge{display:inline-block;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:800;text-transform:uppercase;color:#fff;margin-top:6px;}
+  .leave-status-pending{background:var(--yellow);color:#3A2600;}
+  .leave-status-approved{background:var(--green);}
+  .leave-status-rejected{background:var(--red);}
+  .leave-actions{display:flex;gap:8px;margin-top:10px;}
+  .leave-actions .btn{width:auto;flex:1;padding:10px;font-size:13px;margin-top:0;}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>🔧 Mechanic Portal</h1>
+      <div class="sub" id="headerSub">Field Operations</div>
+    </div>
+    <button class="logout-btn hidden" id="logoutBtn" onclick="logout()">Logout</button>
+  </header>
+
+  <main>
+
+    <div id="authScreen">
+      <div class="center-logo">
+        <div class="icon">🔧</div>
+        <h2>Mechanic Login</h2>
+        <p>Log in with your Mechanic ID and password</p>
+      </div>
+      <div class="card" id="loginForm">
+        <div id="loginMsg"></div>
+        <div class="field">
+          <label>Mechanic ID</label>
+          <input type="text" id="loginMechId" placeholder="e.g. MCH-01" autocomplete="off" autocapitalize="none" spellcheck="false"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();handleLogin();}">
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" id="loginPassword" placeholder="Enter your password" autocomplete="current-password"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();handleLogin();}">
+          <div class="pw-toggle" id="pwToggle" onclick="togglePasswordVisibility()">Show password</div>
+        </div>
+        <button class="btn btn-primary" id="loginBtn" onclick="handleLogin()">Log In</button>
+      </div>
+      <p style="text-align:center;font-size:11px;color:var(--muted);margin-top:4px;">
+        Accounts are created by management only. Contact your supervisor if you need access.
+      </p>
+    </div>
+
+    <div id="homeScreen" class="hidden">
+      <div class="card" style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-weight:800;font-size:16px;" id="dashName">-</div>
+          <div style="color:var(--muted);font-size:12px;" id="dashMobile">-</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:20px;font-weight:800;color:var(--green-dark);" id="dashActiveCount">0</div>
+          <div style="font-size:11px;color:var(--muted);">Active Jobs</div>
+        </div>
+      </div>
+
+      <div class="section-title">Vehicles Needing Attention</div>
+      <div id="breakdownListMsg"></div>
+      <div id="breakdownList"></div>
+    </div>
+
+    <div id="jobsScreen" class="hidden">
+      <div class="section-title">My Active Jobs</div>
+      <div id="jobsListMsg"></div>
+      <div id="jobsList"></div>
+    </div>
+
+    <div id="ganttScreen" class="hidden">
+      <div class="section-title">Work Timeline</div>
+      <div class="tab-toggle" style="margin-bottom:12px;">
+        <button id="ganttTodayBtn" class="active" onclick="loadGantt('today')">Today</button>
+        <button id="gantt7Btn" onclick="loadGantt('7days')">Last 7 Days</button>
+      </div>
+      <div id="ganttMsg"></div>
+      <div class="gantt-scroll" id="ganttScrollWrap"></div>
+    </div>
+
+    <div id="leaveScreen" class="hidden">
+      <div class="section-title" style="margin-top:0;">Pending Leave Applications</div>
+      <div id="leavePendingMsg"></div>
+      <div id="leavePendingList"></div>
+
+      <div class="section-title">Recently Reviewed</div>
+      <div id="leaveReviewedList"></div>
+    </div>
+
+    <div id="scanScreen" class="hidden">
+      <div class="card">
+        <div class="section-title" style="margin-top:0;">Scan Vehicle QR — Start Work</div>
+        <div id="qr-reader"></div>
+        <div id="startCameraWrap" style="text-align:center;padding:16px 0;">
+          <button class="btn btn-primary" style="width:auto;padding:12px 24px;" onclick="startScanner()">📷 Start Camera</button>
+        </div>
+        <div class="scan-status" id="scanStatus"></div>
+        <div class="manual-toggle" onclick="toggleManual()">Enter vehicle code manually instead</div>
+        <div id="manualEntry" class="hidden" style="margin-top:12px;">
+          <div class="field">
+            <label>Vehicle Code</label>
+            <input type="text" id="manualCode" placeholder="e.g. DF01" style="text-transform:uppercase;">
+          </div>
+          <button class="btn btn-outline" onclick="submitManualCode()">Lookup Vehicle</button>
+        </div>
+        <button class="btn btn-outline" onclick="goHome()">Cancel</button>
+      </div>
+    </div>
+
+    <div id="vehicleInfoScreen" class="hidden">
+      <div class="card" style="background:var(--green-light);border-color:var(--green);">
+        <div style="font-size:19px;font-weight:800;color:var(--green-dark);" id="viVehicleName">-</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;" id="viVehicleCode">-</div>
+        <div style="margin-top:8px;" id="viStatusBadge"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">Current Driver</div>
+        <div id="viCurrentDriver"></div>
+        <div class="section-title">Last Driver</div>
+        <div id="viLastDriver"></div>
+        <div class="section-title">Active Mechanic(s)</div>
+        <div id="viActiveMechanics"></div>
+      </div>
+
+      <div class="card">
+        <div id="startWorkMsg"></div>
+        <div class="field">
+          <label>Vehicle Condition Found at Start (for your record — starting work always sets the vehicle to "In Progress")</label>
+          <select id="startStatusSelect">
+            <option value="In Progress">In Progress</option>
+            <option value="Breakdown">Breakdown</option>
+            <option value="Running">Running</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Vehicle Location</label>
+          <select id="startLocationSelect"><option value="">Loading locations...</option></select>
+        </div>
+        <button class="btn btn-primary" id="startWorkBtn" onclick="confirmStartWork()">Start Work</button>
+        <button class="btn btn-outline" onclick="goHome()">Cancel</button>
+      </div>
+    </div>
+
+    <div id="endWorkScreen" class="hidden">
+      <div class="card" style="background:var(--green-light);border-color:var(--green);">
+        <div style="font-size:19px;font-weight:800;color:var(--green-dark);" id="ewVehicleName">-</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;" id="ewVehicleCode">-</div>
+        <div class="info-row"><div class="label">Started</div><div class="value" id="ewStartTime">-</div></div>
+        <div class="info-row"><div class="label">Duration so far</div><div class="value" id="ewDuration">-</div></div>
+      </div>
+      <div class="card">
+        <div id="endWorkMsg"></div>
+        <div class="field">
+          <label>Final Vehicle Condition</label>
+          <select id="endStatusSelect">
+            <option value="Running">Running — vehicle is now operational</option>
+            <option value="Breakdown">Breakdown — vehicle is still not working</option>
+          </select>
+          <p style="font-size:11px;color:var(--muted);margin-top:6px;">If another mechanic is still actively working on this vehicle, its status will correctly stay "In Progress" regardless of what you choose here.</p>
+        </div>
+        <div class="field">
+          <label>Final Vehicle Location</label>
+          <select id="endLocationSelect"><option value="">Loading locations...</option></select>
+        </div>
+        <button class="btn btn-danger" id="endWorkBtn" onclick="confirmEndWork()">End Work</button>
+        <button class="btn btn-outline" onclick="goHome()">Cancel</button>
+      </div>
+    </div>
+
+    <div id="successScreen" class="hidden">
+      <div class="card" style="text-align:center;">
+        <div style="width:64px;height:64px;background:var(--green-light);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:10px auto 16px;font-size:32px;color:var(--green);" id="successIcon">✓</div>
+        <h2 style="color:var(--green-dark);font-size:18px;margin-bottom:14px;" id="successTitle">Done</h2>
+        <div id="successDetails"></div>
+        <button class="btn btn-primary" style="margin-top:18px;" onclick="goHome()">Back to Home</button>
+      </div>
+    </div>
+
+  </main>
+
+  <button class="fab hidden" id="fabScanBtn" onclick="openScanForStartWork()">+</button>
+
+  <div class="bottom-nav hidden" id="bottomNav">
+    <button id="navHomeBtn" class="active" onclick="switchTab('home')">🏠<br>Home</button>
+    <button id="navJobsBtn" onclick="switchTab('jobs')">🧰<br>My Jobs</button>
+    <button id="navGanttBtn" onclick="switchTab('gantt')">📊<br>Timeline</button>
+    <button id="navLeaveBtn" onclick="switchTab('leave')">🌿<br>Leave</button>
+  </div>
+</div>
+
+<script>
+/* ============ SUPABASE CONFIGURATION ============ */
+const SUPABASE_URL = "https://oshqaazzteqqukilghev.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zaHFhYXp6dGVxcXVraWxnaGV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3Mzc4ODYsImV4cCI6MjEwMTMxMzg4Nn0.Rz33PdqBlq9yWqgNiz_4B_2fG6B3ztpk3dTx44He4F0";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentMechanic = null;
+let pendingVehicle = null;
+let endWorkJob = null;
+let locationListCache = null;
+let html5Qr = null;
+let scanLocked = false;
+let activeTab = "home";
+
+document.addEventListener("DOMContentLoaded", () => {
+  const session = getSession();
+  if (session) {
+    currentMechanic = session;
+    enterApp();
+  } else {
+    showScreen("auth");
+  }
+});
+
+function getSession() {
+  const raw = localStorage.getItem("mechanicSession_v2");
+  return raw ? JSON.parse(raw) : null;
+}
+function setSession(name, mobile, mechanicId) {
+  localStorage.setItem("mechanicSession_v2", JSON.stringify({ name, mobile, mechanic_id: mechanicId || null, loggedIn: true }));
+}
+function clearSession() { localStorage.removeItem("mechanicSession_v2"); }
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str == null ? "" : String(str);
+  return div.innerHTML;
+}
+function showError(elId, text) { document.getElementById(elId).innerHTML = '<div class="error-msg">' + escapeHtml(text) + '</div>'; }
+
+function showScreen(name) {
+  const screens = ["auth","home","jobs","gantt","leave","scan","vehicleInfo","endWork","success"];
+  screens.forEach(s => {
+    const el = document.getElementById(s + "Screen");
+    if (el) el.classList.toggle("hidden", s !== name);
+  });
+  const chrome = name !== "auth";
+  document.getElementById("logoutBtn").classList.toggle("hidden", !chrome);
+  document.getElementById("bottomNav").classList.toggle("hidden", !["home","jobs","gantt","leave"].includes(name));
+  document.getElementById("fabScanBtn").classList.toggle("hidden", !chrome);
+}
+
+function enterApp() {
+  document.getElementById("headerSub").textContent = currentMechanic.name;
+  showScreen("home");
+  switchTab("home");
+}
+
+function togglePasswordVisibility() {
+  const inp = document.getElementById("loginPassword");
+  const t = document.getElementById("pwToggle");
+  const showing = inp.type === "text";
+  inp.type = showing ? "password" : "text";
+  t.textContent = showing ? "Show password" : "Hide password";
+}
+
+function switchTab(tab) {
+  activeTab = tab;
+  document.getElementById("navHomeBtn").classList.toggle("active", tab === "home");
+  document.getElementById("navJobsBtn").classList.toggle("active", tab === "jobs");
+  document.getElementById("navGanttBtn").classList.toggle("active", tab === "gantt");
+  document.getElementById("navLeaveBtn").classList.toggle("active", tab === "leave");
+  showScreen(tab);
+  if (tab === "home") loadHome();
+  if (tab === "jobs") loadMyJobs();
+  if (tab === "gantt") loadGantt("today");
+  if (tab === "leave") loadLeaveApplications();
+}
+
+function goHome() {
+  stopScanner();
+  pendingVehicle = null;
+  endWorkJob = null;
+  switchTab("home");
+}
+
+async function handleLogin() {
+  const mechId = document.getElementById("loginMechId").value.trim();
+  const pass = document.getElementById("loginPassword").value;
+  document.getElementById("loginMsg").innerHTML = "";
+
+  if (!mechId) { showError("loginMsg", "Please enter your Mechanic ID."); return; }
+  if (!pass) { showError("loginMsg", "Please enter your password."); return; }
+
+  const btn = document.getElementById("loginBtn");
+  btn.disabled = true; btn.textContent = "Logging in...";
+
+  try {
+    // Both credentials must match: find the row by Mechanic ID, then verify
+    // the entered password against that mechanic's `paa` column.
+    const { data, error } = await sb.from("mechanic_information")
+      .select("name, mobile_number, mechanic_id, paa")
+      .eq("mechanic_id", mechId)
+      .limit(1);
+    if (error) throw error;
+
+    const mech = (data || [])[0];
+    if (!mech || (mech.paa ?? "") !== pass) {
+      showError("loginMsg", "Invalid Mechanic ID or Password.");
+      btn.disabled = false; btn.textContent = "Log In";
+      return;
+    }
+
+    setSession(mech.name, mech.mobile_number, mech.mechanic_id);
+    currentMechanic = { name: mech.name, mobile: mech.mobile_number, mechanic_id: mech.mechanic_id };
+    btn.disabled = false; btn.textContent = "Log In";
+    document.getElementById("loginPassword").value = "";
+    enterApp();
+  } catch (err) {
+    console.error(err);
+    showError("loginMsg", "Network error. Please try again.");
+    btn.disabled = false; btn.textContent = "Log In";
+  }
+}
+
+function logout() {
+  clearSession();
+  currentMechanic = null;
+  stopScanner();
+  showScreen("auth");
+}
+
+function statusBadgeHtml(status) {
+  const cls = status === "Breakdown" ? "status-breakdown" : status === "In Progress" ? "status-wip" : "status-running";
+  const icon = status === "Breakdown" ? "⛔" : status === "In Progress" ? "🛠️" : "✅";
+  return '<span class="status-badge ' + cls + '">' + icon + ' ' + escapeHtml(status || "Running") + '</span>';
+}
+
+async function loadHome() {
+  document.getElementById("dashName").textContent = currentMechanic.name;
+  document.getElementById("dashMobile").textContent = currentMechanic.mobile;
+
+  const listEl = document.getElementById("breakdownList");
+  document.getElementById("breakdownListMsg").innerHTML = "";
+  listEl.innerHTML = '<div class="empty-state">Loading...</div>';
+
+  try {
+    const { data: vehicles, error: vErr } = await sb
+      .from("latest_data")
+      .select("code, vehicle_name, status, location")
+      .in("status", ["Breakdown", "In Progress"])
+      .order("code");
+    if (vErr) throw vErr;
+
+    updateActiveJobsCount();
+
+    if (!vehicles || vehicles.length === 0) {
+      listEl.innerHTML = '<div class="empty-state">No vehicles currently need attention. 🎉</div>';
+      return;
+    }
+    const codes = vehicles.map(v => v.code);
+
+    const { data: duties } = await sb.from("duty_records")
+      .select("code, driver_name, driver_mobile, duty_start, duty_end")
+      .in("code", codes).order("duty_start", { ascending: false });
+    const latestDutyByCode = {};
+    (duties || []).forEach(d => { if (!latestDutyByCode[d.code]) latestDutyByCode[d.code] = d; });
+
+    const { data: activeMechs } = await sb.from("mechanic_work_history")
+      .select("vehicle_code, mechanic_name, mechanic_mobile_number, work_start_time")
+      .in("vehicle_code", codes).is("work_end_time", null);
+    const mechsByCode = {};
+    (activeMechs || []).forEach(m => {
+      if (!mechsByCode[m.vehicle_code]) mechsByCode[m.vehicle_code] = [];
+      mechsByCode[m.vehicle_code].push(m);
+    });
+
+    listEl.innerHTML = vehicles.map(v => {
+      const duty = latestDutyByCode[v.code];
+      const mechs = mechsByCode[v.code] || [];
+      return '<div class="vehicle-item">' +
+        '<div class="vname">' + escapeHtml(v.vehicle_name) + ' ' + statusBadgeHtml(v.status) + '</div>' +
+        '<div class="vcode">' + escapeHtml(v.code) + '</div>' +
+        '<div class="row"><span>Location</span><span>' + escapeHtml(v.location || "N/A") + '</span></div>' +
+        '<div class="row"><span>Driver</span><span>' + (duty ? escapeHtml(duty.driver_name) + " (" + escapeHtml(duty.driver_mobile) + ")" : "N/A") + '</span></div>' +
+        (mechs.length > 0
+          ? '<div style="margin-top:6px;">' + mechs.map(m => '<span class="mech-chip">' + escapeHtml(m.mechanic_name) + ' since ' + new Date(m.work_start_time).toLocaleTimeString() + '</span>').join("") + '</div>'
+          : '<div class="row"><span>Mechanic</span><span>None assigned yet</span></div>') +
+        '</div>';
+    }).join("");
+  } catch (err) {
+    console.error(err);
+    listEl.innerHTML = "";
+    showError("breakdownListMsg", "Error loading vehicles.");
+  }
+}
+
+async function updateActiveJobsCount() {
+  const { count } = await sb.from("mechanic_work_history")
+    .select("*", { count: "exact", head: true })
+    .eq("mechanic_mobile_number", currentMechanic.mobile)
+    .is("work_end_time", null);
+  document.getElementById("dashActiveCount").textContent = count ?? 0;
+}
+
+async function loadMyJobs() {
+  const listEl = document.getElementById("jobsList");
+  document.getElementById("jobsListMsg").innerHTML = "";
+  listEl.innerHTML = '<div class="empty-state">Loading...</div>';
+
+  try {
+    const { data: jobs, error } = await sb.from("mechanic_work_history")
+      .select("id, vehicle_code, vehicle_name, work_start_time, start_location, status_at_start")
+      .eq("mechanic_mobile_number", currentMechanic.mobile)
+      .is("work_end_time", null)
+      .order("work_start_time", { ascending: false });
+    if (error) throw error;
+
+    if (!jobs || jobs.length === 0) {
+      listEl.innerHTML = '<div class="empty-state">You have no active jobs. Tap the + button to start one.</div>';
+      return;
+    }
+
+    const codes = [...new Set(jobs.map(j => j.vehicle_code))];
+    const { data: allActive } = await sb.from("mechanic_work_history")
+      .select("vehicle_code, mechanic_name, mechanic_mobile_number")
+      .in("vehicle_code", codes).is("work_end_time", null);
+    const othersByCode = {};
+    (allActive || []).forEach(m => {
+      if (m.mechanic_mobile_number === currentMechanic.mobile) return;
+      if (!othersByCode[m.vehicle_code]) othersByCode[m.vehicle_code] = [];
+      othersByCode[m.vehicle_code].push(m.mechanic_name);
+    });
+
+    listEl.innerHTML = jobs.map(j => {
+      const others = othersByCode[j.vehicle_code] || [];
+      return '<div class="vehicle-item">' +
+        '<div class="vname">' + escapeHtml(j.vehicle_name) + '</div>' +
+        '<div class="vcode">' + escapeHtml(j.vehicle_code) + '</div>' +
+        '<div class="row"><span>Started</span><span>' + new Date(j.work_start_time).toLocaleString() + '</span></div>' +
+        '<div class="row"><span>Duration</span><span class="job-duration" data-start="' + j.work_start_time + '">-</span></div>' +
+        '<div class="row"><span>Location</span><span>' + escapeHtml(j.start_location || "N/A") + '</span></div>' +
+        (others.length > 0 ? '<div class="row"><span>Also working</span><span>' + escapeHtml(others.join(", ")) + '</span></div>' : '') +
+        '<button class="btn btn-danger" style="margin-top:10px;" onclick="openEndWork(\'' + j.id + '\')">End Work</button>' +
+        '</div>';
+    }).join("");
+
+    tickJobDurations();
+  } catch (err) {
+    console.error(err);
+    listEl.innerHTML = "";
+    showError("jobsListMsg", "Error loading your active jobs.");
+  }
+}
+
+function tickJobDurations() {
+  document.querySelectorAll(".job-duration").forEach(el => {
+    const start = new Date(el.getAttribute("data-start"));
+    el.textContent = formatDuration(new Date() - start);
+  });
+}
+setInterval(() => { if (activeTab === "jobs") tickJobDurations(); }, 30000);
+
+function formatDuration(ms) {
+  const totalMin = Math.floor(ms / 60000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return h + "h " + m + "m";
+}
+
+function openScanForStartWork() {
+  pendingVehicle = null;
+  document.getElementById("manualCode").value = "";
+  document.getElementById("manualEntry").classList.add("hidden");
+  document.getElementById("scanStatus").textContent = "";
+  showScreen("scan");
+}
+
+function toggleManual() { document.getElementById("manualEntry").classList.toggle("hidden"); }
+
+function submitManualCode() {
+  const code = document.getElementById("manualCode").value.trim();
+  if (!code) return;
+  stopScanner();
+  loadVehicleFullInfo(code);
+}
+
+async function startScanner() {
+  const statusEl = document.getElementById("scanStatus");
+  const startWrap = document.getElementById("startCameraWrap");
+  startWrap.style.display = "none";
+  statusEl.textContent = "Requesting camera access...";
+  scanLocked = false;
+
+  if (!window.isSecureContext) { statusEl.textContent = "Camera blocked: open this page over HTTPS (or localhost)."; return; }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { statusEl.textContent = "Camera not supported. Use manual entry below."; return; }
+
+  const readerEl = document.getElementById("qr-reader");
+  readerEl.innerHTML = "";
+  if (!html5Qr) html5Qr = new Html5Qrcode("qr-reader");
+  const config = { fps: 10, qrbox: { width: 220, height: 220 } };
+  const onSuccess = (decodedText) => {
+    if (scanLocked) return;
+    scanLocked = true;
+    statusEl.textContent = "Code detected: " + decodedText;
+    stopScanner();
+    loadVehicleFullInfo(decodedText.trim());
+  };
+  const onFailure = () => {};
+
+  try {
+    await html5Qr.start({ facingMode: "environment" }, config, onSuccess, onFailure);
+    startWrap.style.display = "none";
+    statusEl.textContent = "Point camera at the QR code";
+    return;
+  } catch (err) { console.warn(err); }
+
+  try {
+    const cams = await Html5Qrcode.getCameras();
+    if (!cams || cams.length === 0) { statusEl.textContent = "No camera found."; return; }
+    const back = cams.find(c => /back|rear|environment/i.test(c.label)) || cams[0];
+    await html5Qr.start({ deviceId: { exact: back.id } }, config, onSuccess, onFailure);
+    startWrap.style.display = "none";
+    statusEl.textContent = "Point camera at the QR code";
+  } catch (err) {
+    console.error(err);
+    const n = err && err.name;
+    statusEl.textContent = n === "NotAllowedError" ? "Camera permission denied." :
+      n === "NotFoundError" ? "No camera found." :
+      n === "NotReadableError" ? "Camera already in use by another app." : "Camera not available.";
+    startWrap.style.display = "block";
+  }
+}
+function stopScanner() { if (html5Qr) html5Qr.stop().then(() => html5Qr.clear()).catch(() => {}); }
+
+async function loadVehicleFullInfo(code) {
+  const upperCode = code.toUpperCase();
+  try {
+    const { data: vehicle, error: mErr } = await sb.from("master").select("code, vehicle_name").ilike("code", upperCode).maybeSingle();
+    if (mErr) throw mErr;
+    if (!vehicle) { alert("Vehicle not found for code: " + code); return; }
+
+    const { data: latest } = await sb.from("latest_data").select("status, location").eq("code", vehicle.code).maybeSingle();
+
+    const { data: duties } = await sb.from("duty_records")
+      .select("driver_name, driver_mobile, driver_id, duty_start, duty_end")
+      .eq("code", vehicle.code).order("duty_start", { ascending: false }).limit(5);
+    const currentDuty = (duties || []).find(d => !d.duty_end);
+    const lastDuty = (duties || []).find(d => d.duty_end);
+
+    const { data: activeMechs } = await sb.from("mechanic_work_history")
+      .select("mechanic_name, mechanic_mobile_number, work_start_time")
+      .eq("vehicle_code", vehicle.code).is("work_end_time", null);
+
+    pendingVehicle = { code: vehicle.code, vehicle_name: vehicle.vehicle_name, status: latest ? latest.status : "Running" };
+
+    document.getElementById("viVehicleName").textContent = vehicle.vehicle_name;
+    document.getElementById("viVehicleCode").textContent = vehicle.code;
+    document.getElementById("viStatusBadge").innerHTML = statusBadgeHtml(latest ? latest.status : "Running");
+
+    document.getElementById("viCurrentDriver").innerHTML = currentDuty
+      ? infoRows([["Name", currentDuty.driver_name], ["Mobile", currentDuty.driver_mobile], ["Driver ID", currentDuty.driver_id || "N/A"], ["Duty Start", new Date(currentDuty.duty_start).toLocaleString()]])
+      : '<div class="empty-state" style="padding:8px 0;">No driver currently on duty</div>';
+
+    document.getElementById("viLastDriver").innerHTML = lastDuty
+      ? infoRows([["Name", lastDuty.driver_name], ["Mobile", lastDuty.driver_mobile], ["Driver ID", lastDuty.driver_id || "N/A"], ["Duty End", new Date(lastDuty.duty_end).toLocaleString()]])
+      : '<div class="empty-state" style="padding:8px 0;">No previous duty record</div>';
+
+    document.getElementById("viActiveMechanics").innerHTML = (activeMechs && activeMechs.length > 0)
+      ? activeMechs.map((m,i) => infoRows([["Mechanic " + (i+1), m.mechanic_name], ["Mobile", m.mechanic_mobile_number], ["Started", new Date(m.work_start_time).toLocaleString()]])).join('<div style="height:8px;"></div>')
+      : '<div class="empty-state" style="padding:8px 0;">No active mechanic assigned</div>';
+
+    document.getElementById("startStatusSelect").value = (latest && latest.status === "Running") ? "In Progress" : (latest ? latest.status : "In Progress");
+    document.getElementById("startWorkMsg").innerHTML = "";
+    showScreen("vehicleInfo");
+    loadLocationOptions("startLocationSelect", latest ? latest.location : null);
+  } catch (err) {
+    console.error(err);
+    alert("Network error while looking up vehicle.");
+  }
+}
+
+function infoRows(pairs) {
+  return pairs.map(p => '<div class="info-row"><div class="label">' + escapeHtml(p[0]) + '</div><div class="value">' + escapeHtml(p[1]) + '</div></div>').join("");
+}
+
+async function loadLocationOptions(selectId, preselect) {
+  const sel = document.getElementById(selectId);
+  if (!locationListCache) {
+    try {
+      const { data, error } = await sb.from("location").select("name").order("name");
+      if (error) throw error;
+      locationListCache = data || [];
+    } catch (err) {
+      console.error(err);
+      sel.innerHTML = '<option value="">Error loading locations</option>';
+      return;
+    }
+  }
+  if (locationListCache.length === 0) { sel.innerHTML = '<option value="">No locations configured</option>'; return; }
+  sel.innerHTML = '<option value="">-- Select location --</option>' +
+    locationListCache.map(l => '<option value="' + escapeHtml(l.name) + '"' + (l.name === preselect ? " selected" : "") + '>' + escapeHtml(l.name) + '</option>').join("");
+}
+
+async function confirmStartWork() {
+  document.getElementById("startWorkMsg").innerHTML = "";
+  const status = document.getElementById("startStatusSelect").value;
+  const location = document.getElementById("startLocationSelect").value;
+  if (!location) { showError("startWorkMsg", "Please select the vehicle's location."); return; }
+  if (!pendingVehicle) { showError("startWorkMsg", "No vehicle selected."); return; }
+
+  const btn = document.getElementById("startWorkBtn");
+  btn.disabled = true; btn.textContent = "Starting...";
+
+  try {
+    const { data: ownActive } = await sb.from("mechanic_work_history")
+      .select("id").eq("vehicle_code", pendingVehicle.code)
+      .eq("mechanic_mobile_number", currentMechanic.mobile).is("work_end_time", null).maybeSingle();
+    if (ownActive) {
+      showError("startWorkMsg", "You already have active work on this vehicle. Check My Active Jobs.");
+      btn.disabled = false; btn.textContent = "Start Work";
+      return;
+    }
+
+    // Single atomic RPC: inserts the work record AND forces
+    // latest_data.status = 'In Progress' server-side (never "Running",
+    // regardless of what was picked above — see rule 9.2).
+    const { data: workRow, error: rpcErr } = await sb.rpc("start_mechanic_work", {
+      p_vehicle_code: pendingVehicle.code,
+      p_vehicle_name: pendingVehicle.vehicle_name,
+      p_mechanic_id: currentMechanic.mechanic_id,
+      p_mechanic_name: currentMechanic.name,
+      p_mechanic_mobile: currentMechanic.mobile,
+      p_start_location: location,
+      p_status_at_start: status
+    });
+    if (rpcErr) throw rpcErr;
+
+    btn.disabled = false; btn.textContent = "Start Work";
+    document.getElementById("successIcon").textContent = "🛠️";
+    document.getElementById("successTitle").textContent = "Work Started";
+    document.getElementById("successDetails").innerHTML = infoRows([
+      ["Vehicle", workRow.vehicle_name], ["Status", "In Progress"], ["Location", location],
+      ["Start Time", new Date(workRow.work_start_time).toLocaleString()]
+    ]);
+    showScreen("success");
+  } catch (err) {
+    console.error(err);
+    showError("startWorkMsg", "Error starting work. Please try again.");
+    btn.disabled = false; btn.textContent = "Start Work";
+  }
+}
+
+async function openEndWork(jobId) {
+  try {
+    const { data: job, error } = await sb.from("mechanic_work_history")
+      .select("id, vehicle_code, vehicle_name, work_start_time, start_location")
+      .eq("id", jobId).single();
+    if (error) throw error;
+
+    endWorkJob = job;
+    document.getElementById("ewVehicleName").textContent = job.vehicle_name;
+    document.getElementById("ewVehicleCode").textContent = job.vehicle_code;
+    document.getElementById("ewStartTime").textContent = new Date(job.work_start_time).toLocaleString();
+    document.getElementById("ewDuration").textContent = formatDuration(new Date() - new Date(job.work_start_time));
+    document.getElementById("endWorkMsg").innerHTML = "";
+    showScreen("endWork");
+    loadLocationOptions("endLocationSelect", job.start_location);
+  } catch (err) {
+    console.error(err);
+    alert("Error loading job details.");
+  }
+}
+
+async function confirmEndWork() {
+  document.getElementById("endWorkMsg").innerHTML = "";
+  const finalStatus = document.getElementById("endStatusSelect").value;
+  const finalLocation = document.getElementById("endLocationSelect").value;
+  if (!finalLocation) { showError("endWorkMsg", "Please select the vehicle's final location."); return; }
+  if (!endWorkJob) { showError("endWorkMsg", "No active job selected."); return; }
+
+  const btn = document.getElementById("endWorkBtn");
+  btn.disabled = true; btn.textContent = "Ending...";
+
+  try {
+    // Single atomic RPC: closes only THIS mechanic's own record, then
+    // — in the same transaction — checks whether any other mechanic
+    // is still active on this vehicle before touching latest_data.
+    const { data: result, error: rpcErr } = await sb.rpc("end_mechanic_work", {
+      p_work_id: endWorkJob.id,
+      p_end_location: finalLocation,
+      p_final_condition: finalStatus
+    });
+    if (rpcErr) throw rpcErr;
+
+    const updated = result.work_record;
+    btn.disabled = false; btn.textContent = "End Work";
+    document.getElementById("successIcon").textContent = "🏁";
+    document.getElementById("successTitle").textContent = "Work Ended";
+    document.getElementById("successDetails").innerHTML = infoRows([
+      ["Vehicle", updated.vehicle_name],
+      ["Duration", formatDuration(new Date(updated.work_end_time) - new Date(updated.work_start_time))],
+      ["Your Final Condition", finalStatus],
+      ["Vehicle Current Status", result.final_status],
+      ["Final Location", finalLocation]
+    ].concat(result.remaining_active > 0 ? [["Note", result.remaining_active + " other mechanic(s) still active on this vehicle"]] : []));
+    showScreen("success");
+  } catch (err) {
+    console.error(err);
+    showError("endWorkMsg", "Error ending work. Please try again.");
+    btn.disabled = false; btn.textContent = "End Work";
+  }
+}
+
+async function loadGantt(range) {
+  document.getElementById("ganttTodayBtn").classList.toggle("active", range === "today");
+  document.getElementById("gantt7Btn").classList.toggle("active", range === "7days");
+
+  const wrap = document.getElementById("ganttScrollWrap");
+  document.getElementById("ganttMsg").innerHTML = "";
+  wrap.innerHTML = '<div class="empty-state">Loading...</div>';
+
+  const from = new Date();
+  if (range === "today") from.setHours(0,0,0,0); else from.setDate(from.getDate() - 7);
+
+  try {
+    const { data: rows, error } = await sb.from("mechanic_work_history")
+      .select("vehicle_name, mechanic_name, work_start_time, work_end_time, start_location, end_location, status_at_end")
+      .gte("work_start_time", from.toISOString())
+      .order("work_start_time")
+      .limit(200);
+    if (error) throw error;
+
+    if (!rows || rows.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">No work records in this range.</div>';
+      return;
+    }
+
+    const now = new Date();
+    const rangeStart = Math.min(...rows.map(r => new Date(r.work_start_time).getTime()));
+    const rangeEnd = Math.max(...rows.map(r => (r.work_end_time ? new Date(r.work_end_time).getTime() : now.getTime())), now.getTime());
+    const totalSpan = Math.max(rangeEnd - rangeStart, 60 * 60 * 1000);
+
+    const byVehicle = {};
+    rows.forEach(r => { (byVehicle[r.vehicle_name] = byVehicle[r.vehicle_name] || []).push(r); });
+
+    let html = "";
+    Object.keys(byVehicle).forEach(vname => {
+      html += '<div class="gantt-row"><div class="gantt-label">' + escapeHtml(vname) + '</div><div class="gantt-track">';
+      byVehicle[vname].forEach(r => {
+        const start = new Date(r.work_start_time).getTime();
+        const end = r.work_end_time ? new Date(r.work_end_time).getTime() : now.getTime();
+        const leftPct = ((start - rangeStart) / totalSpan) * 100;
+        const widthPct = Math.max(((end - start) / totalSpan) * 100, 1.5);
+        const completed = !!r.work_end_time;
+        const title = r.mechanic_name + " | " + new Date(r.work_start_time).toLocaleTimeString() +
+          " - " + (r.work_end_time ? new Date(r.work_end_time).toLocaleTimeString() : "ongoing") +
+          " | " + (r.start_location || "-") + " -> " + (r.end_location || "-") +
+          " | " + (r.status_at_end || "in progress");
+        html += '<div class="gantt-bar' + (completed ? " completed" : "") + '" style="left:' + leftPct + '%;width:' + widthPct + '%;" title="' + escapeHtml(title) + '" onclick="alert(\'' + escapeHtml(title).replace(/'/g, "\\'") + '\')">' + escapeHtml(r.mechanic_name) + '</div>';
+      });
+      html += '</div></div>';
+    });
+
+    wrap.innerHTML = html;
+  } catch (err) {
+    console.error(err);
+    wrap.innerHTML = "";
+    showError("ganttMsg", "Error loading timeline.");
+  }
+}
+
+/* ============ LEAVE APPLICATIONS ============ */
+function fmtLeaveDate(dateStr) {
+  // dateStr is "YYYY-MM-DD" from the date column — parse as local, not UTC.
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+}
+
+async function loadLeaveApplications() {
+  const pendingList = document.getElementById("leavePendingList");
+  const reviewedList = document.getElementById("leaveReviewedList");
+  document.getElementById("leavePendingMsg").innerHTML = "";
+  pendingList.innerHTML = '<div class="scan-status">Loading...</div>';
+  reviewedList.innerHTML = "";
+
+  try {
+    const { data: pending, error: pendingErr } = await sb
+      .from("driver_leave")
+      .select("id, driver_id, name, date, status")
+      .eq("status", "pending")
+      .order("date", { ascending: true });
+    if (pendingErr) throw pendingErr;
+
+    if (!pending || pending.length === 0) {
+      pendingList.innerHTML = '<div class="empty-state">No pending leave applications.</div>';
+    } else {
+      pendingList.innerHTML = pending.map(app => (
+        '<div class="leave-item">' +
+        '<div class="lname">' + escapeHtml(app.name) + ' (' + escapeHtml(app.driver_id) + ')</div>' +
+        '<div class="ldate">' + fmtLeaveDate(app.date) + '</div>' +
+        '<span class="leave-status-badge leave-status-pending">Pending</span>' +
+        '<div class="leave-actions">' +
+        '<button class="btn btn-primary" onclick="approveLeave(' + app.id + ')">✓ Approve</button>' +
+        '<button class="btn btn-danger" onclick="rejectLeave(' + app.id + ')">✕ Reject</button>' +
+        '</div></div>'
+      )).join("");
+    }
+
+    const { data: reviewed, error: reviewedErr } = await sb
+      .from("driver_leave")
+      .select("id, driver_id, name, date, status, reviewed_by, reviewed_at")
+      .in("status", ["approved", "rejected"])
+      .order("reviewed_at", { ascending: false })
+      .limit(20);
+    if (reviewedErr) throw reviewedErr;
+
+    if (!reviewed || reviewed.length === 0) {
+      reviewedList.innerHTML = '<div class="empty-state">No leave applications reviewed yet.</div>';
+    } else {
+      reviewedList.innerHTML = reviewed.map(app => (
+        '<div class="leave-item">' +
+        '<div class="lname">' + escapeHtml(app.name) + ' (' + escapeHtml(app.driver_id) + ')</div>' +
+        '<div class="ldate">' + fmtLeaveDate(app.date) + '</div>' +
+        '<span class="leave-status-badge leave-status-' + app.status + '">' + app.status + '</span>' +
+        (app.reviewed_by ? '<div class="ldate">by ' + escapeHtml(app.reviewed_by) + (app.reviewed_at ? ' · ' + new Date(app.reviewed_at).toLocaleString() : '') + '</div>' : '') +
+        '</div>'
+      )).join("");
+    }
+  } catch (err) {
+    console.error(err);
+    showError("leavePendingMsg", "Error loading leave applications.");
+    pendingList.innerHTML = "";
+  }
+}
+
+async function approveLeave(id) {
+  if (!currentMechanic) return;
+  if (!confirm("Approve this leave application?")) return;
+
+  try {
+    const { data: app, error: fetchErr } = await sb
+      .from("driver_leave")
+      .select("id, driver_id, name, date, status")
+      .eq("id", id)
+      .maybeSingle();
+    if (fetchErr) throw fetchErr;
+    if (!app || app.status !== "pending") {
+      showError("leavePendingMsg", "This application was already reviewed.");
+      loadLeaveApplications();
+      return;
+    }
+
+    // Only flip status if it's still pending — guards against double-clicking
+    // Approve, or two supervisors reviewing the same application at once.
+    const { error: updErr } = await sb
+      .from("driver_leave")
+      .update({ status: "approved", reviewed_by: currentMechanic.name, reviewed_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("status", "pending");
+    if (updErr) throw updErr;
+
+    // Mirror the approved leave into duty_records for record-keeping.
+    const { data: existingDuty, error: dutyCheckErr } = await sb
+      .from("duty_records")
+      .select("id")
+      .eq("driver_id", app.driver_id)
+      .gte("duty_start", app.date + "T00:00:00")
+      .lt("duty_start", app.date + "T23:59:59.999")
+      .limit(1)
+      .maybeSingle();
+    if (dutyCheckErr) console.warn("duty_records check failed:", dutyCheckErr.message);
+
+    if (!existingDuty) {
+      const { error: dutyInsertErr } = await sb.from("duty_records").insert({
+        driver_id: app.driver_id,
+        driver_name: app.name,
+        driver_mobile: "",
+        code: "LEAVE",
+        vehicle_name: "Leave",
+        location: "Leave",
+        duty_start: app.date + "T00:00:00",
+        duty_end: app.date + "T00:00:00",
+        duty_status: "leave",
+        end_type: "Leave Approved",
+        effective_duty_minutes: 0
+      });
+      if (dutyInsertErr) console.warn("duty_records leave-marker insert failed:", dutyInsertErr.message);
+    }
+
+    loadLeaveApplications();
+  } catch (err) {
+    console.error(err);
+    showError("leavePendingMsg", "Error approving leave. Please try again.");
+  }
+}
+
+async function rejectLeave(id) {
+  if (!currentMechanic) return;
+  if (!confirm("Reject this leave application? The date will remain Absent.")) return;
+
+  try {
+    const { error } = await sb
+      .from("driver_leave")
+      .update({ status: "rejected", reviewed_by: currentMechanic.name, reviewed_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("status", "pending");
+    if (error) throw error;
+    loadLeaveApplications();
+  } catch (err) {
+    console.error(err);
+    showError("leavePendingMsg", "Error rejecting leave. Please try again.");
+  }
+}
+</script>
+</body>
+</html>
